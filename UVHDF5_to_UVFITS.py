@@ -38,6 +38,8 @@ imag = fid["imag"][:,:] # [Jy]
 weight = fid["weight"][:,:] #[1/Jy^2]
 fid.close()
 
+assert np.all(np.diff(freqs) > 0.0), "UVHDF5 Frequencies were not in increasing order. Check the format of your file."
+
 # Make sure that the original dataset and our UVHDF5 file have the same number of channels and visibilities
 assert nfreq == len(freqs), "Number of frequencies mismatched between UVFITS ({}) and UVHDF5 ({}).".format(nfreq, len(freqs))
 assert data["DATA"].shape[0] == uu.shape[1], "Number of visibilities mismatched between UVFITS ({}) and UVHDF5 ({}).".format(data["DATA"].shape[0], uu.shape[1])
