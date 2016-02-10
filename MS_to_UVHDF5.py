@@ -3,13 +3,12 @@
 import argparse
 
 parser = argparse.ArgumentParser(description="Convert CASA MS files into UVHDF5 file format.")
-parser.add_argument("MS", help="The input MS file.")
+parser.add_argument("--MS", help="The input MS file.")
 parser.add_argument("--out", default="data.hdf5", help="The output UVHDF5 file.")
-args = parser.parse_args()
+parser.add_argument("--casac", action="store_true", help="Use the casac distribution instead of casapy")
+args,extras = parser.parse_known_args()
 
 import numpy as np
-import astropy.io.fits as pyfits
-import astropy.io.ascii as ascii
 import sys
 import shutil
 import h5py
@@ -19,20 +18,20 @@ cc = 2.99792458e10 # [cm s^-1]
 # Credit: parts of this file originated from the `vis_sample` repository,
 # at https://github.com/AstroChem/vis_sample/blob/master/vis_sample/file_handling.py
 
-# CASA interfacing code comes from Peter Williams' casa-python and casa-data package
 # commands for retrieving ms data are from Sean Andrews (@seanandrews)
 
-try:
-    import casac
-except ImportError:
-    print("casac was not able to be imported, make sure all dependent packages are installed")
-    print("try: conda install -c pkgw casa-python casa-data")
-    sys.exit(1)
+if args.casac:
+    try:
+        import casac
+        tb = casac.casac.table()
+        ms = casac.casac.ms()
+
+    except ImportError:
+        print("casac was not able to be imported, make sure all dependent packages are installed")
+        print("try: conda install -c pkgw casa-python casa-data")
+        sys.exit(1)
 
 filename = args.MS
-
-tb = casac.casac.table()
-ms = casac.casac.ms()
 
 # Use CASA table tools to get columns of UVW, DATA, WEIGHT, etc.
 tb.open(filename)
@@ -43,6 +42,12 @@ weight  = tb.getcol("WEIGHT")
 ant1    = tb.getcol("ANTENNA1")
 ant2    = tb.getcol("ANTENNA2")
 tb.close()
+
+print("These are the ORIGINAL sizes of the tables in the measurement set.")
+print("DATA", data.shape)
+print("UVW", uvw.shape)
+print("FLAG", flag.shape)
+print("WEIGHT", weight.shape)
 
 # Use CASA ms tools to get the channel/spw info
 ms.open(filename)
@@ -75,38 +80,27 @@ for i in range(nchan):
     sp_wgt[:,i,:] = weight
 
 # (weighted) average the polarizations
-Re  = np.sum(data.real*sp_wgt, axis=0) / np.sum(sp_wgt, axis=0)
-Im  = np.sum(data.imag*sp_wgt, axis=0) / np.sum(sp_wgt, axis=0)
-Wgt = np.squeeze(np.sum(sp_wgt, axis=0))
+real  = np.sum(data.real*sp_wgt, axis=0) / np.sum(sp_wgt, axis=0)
+imag  = np.sum(data.imag*sp_wgt, axis=0) / np.sum(sp_wgt, axis=0)
+weight = np.squeeze(np.sum(sp_wgt, axis=0))
 
 # if there's only a single channel, expand this to be a (1, nvis) array
 if nchan==1:
     real = Re[np.newaxis, :]
     imag = Im[np.newaxis, :]
 
-# Get rid of any flagged columns
-print("flag shape", flag.shape)
-# Is this the proper way to be checking flags? What if some are not entirely true across the polarization axis and the frequency axes?
-
-flagged = np.all(flag, axis=(0, 1)) # Boolean array of length nvis
-
-assert np.all(flagged == np.any(flag, axis=(0, 1))), "There may be some flags that do not extend across both polarizations or all channels. Export code is not yet equipped to handle this case."
-
+flagged = np.any(flag, axis=(0)) # Boolean array of size (nchan, nvis)
 unflagged = ~flagged # Flip so that indexing by this array gives us the good visibilities
 
 # toss out the autocorrelation placeholders
-# select only the cross-correlation values
+# Flags to select only the cross-correlation values
 xc = ant1 != ant2
 
-# Now, combine the flagging indices with the autocorrelation indices so that we export only the good values
-ind = xc & unflagged
+# Now, combine the flagging indices with the autocorrelation indices
+# These flags denote all visibilities that we should not be including in our likelihood calculation.
+flag = ~xc & flagged
 
-uu = uu[:,ind]
-vv = vv[:,ind]
-
-real = Re[:,ind]
-imag = Im[:,ind]
-weight = Wgt[:,ind]
+print("flag shape", flag.shape)
 
 # uu, vv are now (nchan, nvis) shape arrays
 shape = uu.shape
@@ -147,6 +141,7 @@ if dnu_pos:
     fid.create_dataset("imag", shape, dtype="float64")[:,:] = imag # [Jy]
 
     fid.create_dataset("weight", shape, dtype="float64")[:,:] = weight #[1/Jy^2]
+    fid.create_dataset("flag", shape, dtype="bool")[:,:] = flag # Boolean
 
 else:
     print("UVFITS stored frequencies in decreasing order, flipping to positive for UVHDF5")
@@ -160,5 +155,6 @@ else:
     fid.create_dataset("imag", shape, dtype="float64")[:,:] = imag[::-1] # [Jy]
 
     fid.create_dataset("weight", shape, dtype="float64")[:,:] = weight[::-1] #[1/Jy^2]
+    fid.create_dataset("flag", shape, dtype="bool")[:,:] = flag[::-1] # Boolean
 
 fid.close()

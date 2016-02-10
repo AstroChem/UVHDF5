@@ -2,16 +2,14 @@
 
 import argparse
 
-parser = argparse.ArgumentParser(description="Convert UVHDF5 files into UVFITS files.")
-parser.add_argument("HDF5", default="model.hdf5", help="The name of the UVHDF5 file you wish to import.")
-parser.add_argument("MS", help="The original MS data set, so that we can copy it to stuff in new values.")
+parser = argparse.ArgumentParser(description="Convert UVHDF5 files into CASA Measurement Set files.")
+parser.add_argument("--HDF5", default="model.hdf5", help="The name of the UVHDF5 file you wish to import.")
+parser.add_argument("--MS", help="The original MS data set, so that we can copy it to stuff in new values.")
 parser.add_argument("--out", default="model.ms", help="The output MS dataset.")
-
-args = parser.parse_args()
+parser.add_argument("--casac", action="store_true", help="Use the casac distribution instead of casapy")
+args,extras = parser.parse_known_args()
 
 import numpy as np
-import astropy.io.fits as pyfits
-import astropy.io.ascii as ascii
 import sys
 import shutil
 import h5py
@@ -28,15 +26,16 @@ cc = 2.99792458e10 # [cm s^-1]
 ms_clone = args.MS
 outfile = args.out
 
-try:
-    import casac
-except ImportError:
-    print("casac was not able to be imported, make sure all dependent packages are installed")
-    print("try: conda install -c pkgw casa-python casa-data")
-    sys.exit(1)
+if args.casac:
+    try:
+        import casac
+        tb = casac.casac.table()
+        ms = casac.casac.ms()
 
-tb = casac.casac.table()
-ms = casac.casac.ms()
+    except ImportError:
+        print("casac was not able to be imported, make sure all dependent packages are installed")
+        print("try: conda install -c pkgw casa-python casa-data")
+        sys.exit(1)
 
 # Copy the original file so that we can then stuff our own visibilities into it
 os.system("rm -rf " + outfile)
@@ -71,6 +70,7 @@ if dnu_pos:
     real = fid["real"][:,:] # [Jy]
     imag = fid["imag"][:,:] # [Jy]
     weight = fid["weight"][:,:] #[1/Jy^2]
+    flag = fid["flag"][:,:] # Bool
 else:
     freqs = fid["freqs"][::-1] # [Hz]
     uu = fid["uu"][::-1,:] # [kilolam]
@@ -78,6 +78,7 @@ else:
     real = fid["real"][::-1,:] # [Jy]
     imag = fid["imag"][::-1,:] # [Jy]
     weight = fid["weight"][::-1,:] #[1/Jy^2]
+    flag = fid["flag"][::-1,:] # Bool
 
 VV = real + 1.0j * imag # [Jy]
 fid.close()
@@ -90,10 +91,9 @@ tb.open(outfile, nomodify=False)
 data = tb.getcol("DATA")
 uvw = tb.getcol("UVW")
 ms_weight = tb.getcol("WEIGHT")
-flag = tb.getcol("FLAG")
+ms_flag = tb.getcol("FLAG")
 
-flagged = np.all(flag, axis=(0, 1)) # Boolean array of length nvis
-assert np.all(flagged == np.any(flag, axis=(0, 1))), "There may be some flags that do not extend across both polarizations or all channels. Export code is not yet equipped to handle this case."
+flagged = np.any(ms_flag, axis=(0, 1)) # Boolean array of length nvis
 unflagged = ~flagged # Flip so that indexing by this array gives us the good visibilities
 
 # we need to pull the antennas and find where the autocorrelation values are and aren't
@@ -101,8 +101,9 @@ ant1    = tb.getcol("ANTENNA1")
 ant2    = tb.getcol("ANTENNA2")
 xc = ant1 != ant2 # indices of cross-correlations
 
-# Now, combine the flagging indices with the autocorrelation indices so that we export only the good values
-ind = xc & unflagged
+# Now, combine the flagging indices with the autocorrelation indices
+# These flags denote all visibilities that we should not be including in our likelihood calculation.
+ms_flag = ~xc & flagged
 
 # Break out the u, v spatial frequencies (in meter units)
 ms_uu = uvw[0,:]
@@ -125,18 +126,20 @@ for i in range(nchan):
 Wgt = np.squeeze(np.sum(sp_wgt, axis=0))
 
 # Check to make sure that the frequencies, uu, vv, and weights are all the same from the original MS and those loaded from the HDF5.
-assert np.allclose(uu, ms_uu[:,ind]), "UU do not match."
-assert np.allclose(vv, ms_vv[:,ind]), "VV do not match."
-assert np.allclose(weight, Wgt[:,ind]), "Weights do not match."
+assert np.allclose(uu, ms_uu), "UU do not match."
+assert np.allclose(vv, ms_vv), "VV do not match."
+assert np.allclose(weight, Wgt), "Weights do not match."
+assert np.all(flag == ms_flag), "Flags do not match."
 
-# replace the original data with the visibilities from the HDF
+# replace the *FULL* original data with the visibilities from the HDF
 
 # load the model file (presume this is just an array of complex numbers, with
 # the appropriate sorting/ordering in original .ms file; also assume that the
 # polarizations have been averaged, and that the model is unpolarized)
-
 # Broadcasts across polarizations if there are multiple.
-data[:,:,unflagged] = VV
+data[:] = VV
+
+#data[:,:,unflagged] = VV
 
 # put the data and weights into the MS
 tb.putcol("DATA", data)

@@ -36,6 +36,7 @@ vv = fid["vv"][:,:] # [kilolam]
 real = fid["real"][:,:] # [Jy]
 imag = fid["imag"][:,:] # [Jy]
 weight = fid["weight"][:,:] #[1/Jy^2]
+flag = fid["flag"][:,:]
 fid.close()
 
 assert np.all(np.diff(freqs) > 0.0), "UVHDF5 Frequencies were not in increasing order. Check the format of your file."

@@ -49,6 +49,9 @@ real = vis[:, :, 0].T
 imag = vis[:, :, 1].T
 weight = vis[:, :, 2].T
 
+# Assume that flags are negative weight values
+flag = weight < 0
+
 # Now, stuff each of these into an HDF5 file.
 fid = h5py.File(args.out, "w")
 
@@ -75,6 +78,7 @@ if dnu > 0:
     fid.create_dataset("imag", shape, dtype="float64")[:,:] = imag # [Jy]
 
     fid.create_dataset("weight", shape, dtype="float64")[:,:] = weight #[1/Jy^2]
+    fid.create_dataset("flag", shape, dtype="bool")[:,:] = flag # Boolean
 
 else:
     print("UVFITS stored frequencies in decreasing order, flipping to positive for UVHDF5")
@@ -87,5 +91,6 @@ else:
     fid.create_dataset("imag", shape, dtype="float64")[:,:] = imag[::-1] # [Jy]
 
     fid.create_dataset("weight", shape, dtype="float64")[:,:] = weight[::-1] #[1/Jy^2]
+    fid.create_dataset("flag", shape, dtype="bool")[:,:] = flag[::-1] # Boolean
 
 fid.close()
