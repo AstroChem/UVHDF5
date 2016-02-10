@@ -52,6 +52,9 @@ weight = vis[:, :, 2].T
 # Assume that flags are negative weight values
 flag = weight < 0
 
+if np.any(flag):
+    print("We found some negative weights. Setting them to flags.")
+
 # Now, stuff each of these into an HDF5 file.
 fid = h5py.File(args.out, "w")
 
