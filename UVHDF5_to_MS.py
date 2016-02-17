@@ -72,13 +72,13 @@ if dnu_pos:
     weight = fid["weight"][:,:] #[1/Jy^2]
     flag = fid["flag"][:,:] # Bool
 else:
-    freqs = fid["freqs"][::-1] # [Hz]
-    uu = fid["uu"][::-1,:] # [kilolam]
-    vv = fid["vv"][::-1,:] # [kilolam]
-    real = fid["real"][::-1,:] # [Jy]
-    imag = fid["imag"][::-1,:] # [Jy]
-    weight = fid["weight"][::-1,:] #[1/Jy^2]
-    flag = fid["flag"][::-1,:] # Bool
+    freqs = fid["freqs"][:][::-1] # [Hz]
+    uu = fid["uu"][:][::-1,:] # [kilolam]
+    vv = fid["vv"][:][::-1,:] # [kilolam]
+    real = fid["real"][:][::-1,:] # [Jy]
+    imag = fid["imag"][:][::-1,:] # [Jy]
+    weight = fid["weight"][:][::-1,:] #[1/Jy^2]
+    flag = fid["flag"][:][::-1,:] # Bool
 
 VV = real + 1.0j * imag # [Jy]
 fid.close()
