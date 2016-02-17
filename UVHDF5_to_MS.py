@@ -7,6 +7,7 @@ parser.add_argument("--HDF5", default="model.hdf5", help="The name of the UVHDF5
 parser.add_argument("--MS", help="The original MS data set, so that we can copy it to stuff in new values.")
 parser.add_argument("--out", default="model.ms", help="The output MS dataset.")
 parser.add_argument("--casac", action="store_true", help="Use the casac distribution instead of casapy")
+parser.add_argument("--skip-check". action="store_true", help="Skip checking that the weights are the same.")
 args,extras = parser.parse_known_args()
 
 import numpy as np
@@ -126,10 +127,11 @@ for i in range(nchan):
 Wgt = np.squeeze(np.sum(sp_wgt, axis=0))
 
 # Check to make sure that the frequencies, uu, vv, and weights are all the same from the original MS and those loaded from the HDF5.
-assert np.allclose(uu, ms_uu), "UU do not match."
-assert np.allclose(vv, ms_vv), "VV do not match."
-assert np.allclose(weight, Wgt), "Weights do not match."
-assert np.all(flag == ms_flag), "Flags do not match."
+if not args.skip_check:
+    assert np.allclose(uu, ms_uu), "UU do not match."
+    assert np.allclose(vv, ms_vv), "VV do not match."
+    assert np.allclose(weight, Wgt), "Weights do not match."
+    assert np.all(flag == ms_flag), "Flags do not match."
 
 # replace the *FULL* original data with the visibilities from the HDF
 

@@ -141,7 +141,7 @@ if dnu_pos:
     fid.create_dataset("imag", shape, dtype="float64")[:,:] = imag # [Jy]
 
     fid.create_dataset("weight", shape, dtype="float64")[:,:] = weight #[1/Jy^2]
-    fid.create_dataset("flag", shape, dtype="bool")[:,:] = flag # Boolean
+    fid.create_dataset("flag", shape, dtype="int")[:,:] = flag # Boolean
 
 else:
     print("UVFITS stored frequencies in decreasing order, flipping to positive for UVHDF5")
@@ -155,6 +155,6 @@ else:
     fid.create_dataset("imag", shape, dtype="float64")[:,:] = imag[::-1] # [Jy]
 
     fid.create_dataset("weight", shape, dtype="float64")[:,:] = weight[::-1] #[1/Jy^2]
-    fid.create_dataset("flag", shape, dtype="bool")[:,:] = flag[::-1] # Boolean
+    fid.create_dataset("flag", shape, dtype="int")[:,:] = flag[::-1] # Boolean
 
 fid.close()
