@@ -151,7 +151,7 @@ if you added the scripts to your `PATH` correctly, you should see something simi
 
 **Import UVHDF5 to MS**
 
-    $ casapy --nologger --nogui -c `which UVHDF5_to_MS.py` --HDF5 MY_MODEL.hdf5 --MS YOUR_ORIGINAL_DATA.ms --out MY_MODEL.hdf5
+    $ casapy --nologger --nogui -c `which UVHDF5_to_MS.py` --HDF5 MY_MODEL.hdf5 --MS YOUR_ORIGINAL_DATA.ms --out MY_MODEL.ms
 
 ## Running using CASAC distribution
 
