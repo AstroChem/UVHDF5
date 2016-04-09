@@ -50,7 +50,7 @@ For now, this format has been designed around the most common type of use case: 
 
 # Installation
 
-Because this format may be updated in the future, the best way to maintain the current version is to clone this repository and add the scripts to your PATH. In general, you will need the `h5py` python package installed on your system to read and write this format. Simple examples of doing this (perhaps for your own modeling scripts) are described next. If you would like to use the CASA measurement set and MIRIAD UVFITS export/import capabilities, please see the bottom of this document for more specific installation instructions for dependencies.
+Because this format may be updated in the future, the best way to maintain the current version is to **clone this repository and add the scripts to your PATH**. In general, you will need the `h5py` python package installed on your system to read and write this format. Simple examples of doing this (perhaps for your own modeling scripts) are described next. If you would like to use the CASA measurement set and MIRIAD UVFITS export/import capabilities, please see the bottom of this document for more specific installation instructions for dependencies.
 
 # Simple Python reading and writing
 
@@ -120,7 +120,7 @@ Both require a little setup, so they are described separately here:
 
 ## Running using your own `casapy` distribution
 
-This requires the python `h5py` package to be installed *to your CASA python distribution.* This can be a little tricky, since CASA bundles its own python interpreter *separate* from whatever interpreter you have on your system. The easiest way to do this is via the helper tools provided in the `casa-python` repository: https://github.com/radio-astro-tools/casa-python. Once you have installed this package, then run
+This requires the python `h5py` package to be installed *into your CASA python distribution.* This can be a little tricky, since CASA bundles its own python interpreter *separate* from whatever python interpreter you have on your system (whether it be your system's python or anaconda python). The easiest way to do this is via the helper tools provided in the `casa-python` repository: https://github.com/radio-astro-tools/casa-python. Once you have installed this package, then run
 
     $ casa-pip install cython
     $ casa-pip install h5py
@@ -133,33 +133,25 @@ to install `cython` and then `h5py`.
 
 However, a frustrating complication with the `casapy` distribution is that in order to run scripts, you need to do something like
 
-    $ casapy --nologger --nogui -c MS_to_UVHDF5.py --MS YOUR_DATA.ms --out data.hdf5
+    $ casapy --nologger --nogui -c my_script.py 
 
-which presents the problem that you need a copy of the script in your current directory. This is generally a bad idea because if you ever need to make an update to your script, it's hard to know whether that change is propagated to all of the copies of your scripts in the various directories you made copies to. To remedy this problem, I made BASH scripts that allow you to execute the script anywhere. In order to run these scripts anywhere, first you must identify the directory where you downloaded these scripts and add an environment variable to your `.bashrc` file (**note**: *not* your `.cshrc`).
+which presents the problem that you need a copy of `my_script.py` in your current directory. This is generally a bad idea because if you ever need to make an update to your script, it's hard to know whether that change is propagated to all of the copies of your scripts in the various directories you made copies to. 
 
-    # in your .bashrc
-    export UVHDF5_dir="/pool/scout0/UVHDF5"
+Thankfully, to remedy this problem you can use a trick (thanks to @elnjensen) with the `which` statement to insert the full path to your installation at runtime. 
+If you already downloaded this repository and then added this to your `PATH` try
 
-This is addition to what you've already done in the installation step, where you added the location of the direcotry to your system path (which could either be in your `.cshrc` or `.bashrc`, or whatever you use). Now, you can use these wrapper scripts in any directory on your system as
+    $ which MS_to_UVHDF5.py
+    > /pool/scout0/UVHDF5/MS_to_UVHDF5.py
 
-**Export to UVHDF5**
+if you added the scripts to your `PATH` correctly, you should see something similar.
 
-    MS_to_UVHDF5.sh -M 2M1207_12CO.data.ms -O data.hdf5
+**Export MS to UVHDF5**
 
-Both of these options must be specified
+    $ casapy --nologger --nogui -c `which MS_to_UVHDF5.py` --MS YOUR_DATA.ms --out data.hdf5
 
-    -M The original measurement set that contains the data.
-    -O The outfile, which is an .hdf5 file to be created.
+**Import UVHDF5 to MS**
 
-**Import to MS**
-
-    UVHDF5_to_MS.sh -H data.hdf5 -M 2M1207_12CO.data.ms -O model.ms
-
-All three of these options must be specified
-
-    -H The UVHDF5 *.hdf5 file that contains your visibilities that you want to import.
-    -M The original measurement set that contains the data. This is copied to serve as a host for your new outfile.
-    -O The outfile, which is your new measurement set (*.ms) to be created.
+    $ casapy --nologger --nogui -c `which UVHDF5_to_MS.py` --HDF5 MY_MODEL.hdf5 --MS YOUR_ORIGINAL_DATA.ms --out MY_MODEL.hdf5
 
 ## Running using CASAC distribution
 
