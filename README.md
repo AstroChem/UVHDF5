@@ -113,8 +113,8 @@ Here is an example of how to write your dataset to this file format in Python.
 
 This step is a little more complicated, but it's mainly due to the difficulty of the many different ways CASA can be scripted. You have two options here:
 
-1. run these scripts using your own `casapy` installation
-2. run these scripts using Peter Williams' `casac` conda distribution, which is generally faster and easier to script.
+1. run these scripts using your own `casapy` installation.
+2. run these scripts using Peter Williams' `casac` conda distribution, which is generally faster and easier to script. However some users have noted difficulty installing `casac`.
 
 Both require a little setup, so they are described separately here:
 
