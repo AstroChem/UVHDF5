@@ -2,7 +2,7 @@
 
 A new straightforward, minimal visibility format for fitting in the UV plane.
 
-This document describes the file format used to store visibilities for modeling in the UV plane, called the `UVHDF5` format. The first part of this document explains the format itself, then further on talks about the scripts used for reading and writing to it from CASA.
+This document describes the file format used to store visibilities for modeling in the UV plane, called the `UVHDF5` format. The first part of this document explains the format itself, then further on talks about the scripts used for reading and writing to it from CASA. We've also added some notes about preparing your data for export to this format in [Data Preparation](data_preparation.md).
 
 # Format Specification: Structure of a UVHDF5 file
 
@@ -36,8 +36,8 @@ The visibilities are stored as the following datasets on the HDF5 file, each wit
     weight [1/Jy^2]
     flag [Boolean mask]
 
-The flag column is TRUE if the data point should be FLAGGED (i.e., excluded from a subsequent uv-fitting program). In general, the flag will be true for visibilities flagged in the data reduction process and for autocorrelation visibilities. 
-    
+The flag column is TRUE if the data point should be FLAGGED (i.e., excluded from a subsequent uv-fitting program). In general, the flag will be true for visibilities flagged in the data reduction process and for autocorrelation visibilities.
+
 # Rationale of using HDF5 (vs. NPZ and other formats)
 
 While NPZ is readable by many scripts at the CfA already, the HDF5 file format presents many attractive features.
@@ -111,33 +111,38 @@ Here is an example of how to write your dataset to this file format in Python.
 
 # Converting CASA Measurement Sets to and from UVHDF5
 
-This step is a little more complicated, but it's mainly due to the difficulty of the many different ways CASA can be scripted. You have two options here:
+This step is a little more complicated, but it's mainly due to the difficulty of the many different ways CASA can be scripted.
 
-1. run these scripts using your own `casapy` installation.
-2. run these scripts using Peter Williams' `casac` conda distribution, which is generally faster and easier to script. However some users have noted difficulty installing `casac`.
+## Running using your own `casa` distribution
 
-Both require a little setup, so they are described separately here:
+The first option requires the python `cython` and `h5py` packages to be installed *into your CASA python distribution.* This can be a little tricky, since CASA bundles its own python interpreter *separate* from whatever python interpreter you have on your system (whether it be your system's python or anaconda python).
 
-## Running using your own `casapy` distribution
+The most recent method known to work (April 2018) is provided the ever-useful astropy docs, [here](http://astropy.readthedocs.io/en/stable/install.html#installing-astropy-into-casa), replacing the `astropy` command with our desired packages. First, start up your casa distribution and run
 
-This requires the python `h5py` package to be installed *into your CASA python distribution.* This can be a little tricky, since CASA bundles its own python interpreter *separate* from whatever python interpreter you have on your system (whether it be your system's python or anaconda python). The easiest way to do this is via the helper tools provided in the `casa-python` repository: https://github.com/radio-astro-tools/casa-python. Once you have installed this package, then run
+    CASA <1>: from setuptools.command import easy_install
+    CASA <2>: easy_install.main(['--user', 'pip'])
 
-    $ casa-pip install cython
-    $ casa-pip install h5py
+Then exit CASA and re-open it, then
 
-to install `cython` and then `h5py`. 
+    CASA <1>: import pip
+    CASA <2>: pip.main(['install', 'cython', '--user'])
+    CASA <3>: pip.main(['install', 'h5py', '--user'])
 
-**Export from CASA measurement set to UVHDF5** is done via the `MS_to_UVHDF5.py` script. 
+Then exit CASA again, and re-open it, and you should be able to do
+
+    CASA <1>: import h5py
+
+**Export from CASA measurement set to UVHDF5** is done via the `MS_to_UVHDF5.py` script.
 
 **Import from UVHDF5 to CASA measurement set** is done via the `UVHDF5_to_MS.py` script.
 
 However, a frustrating complication with the `casapy` distribution is that in order to run scripts, you need to do something like
 
-    $ casapy --nologger --nogui -c my_script.py 
+    $ casapy --nologger --nogui -c my_script.py
 
-which presents the problem that you need a copy of `my_script.py` in your current directory. This is generally a bad idea because if you ever need to make an update to your script, it's hard to know whether that change is propagated to all of the copies of your scripts in the various directories you made copies to. 
+which presents the problem that you need a copy of `my_script.py` in your current directory. This is generally a bad idea because if you ever need to make an update to your script, it's hard to know whether that change is propagated to all of the copies of your scripts in the various directories you made copies to.
 
-Thankfully, to remedy this problem you can use a trick (thanks to @elnjensen) with the `which` statement to insert the full path to your installation at runtime. 
+Thankfully, to remedy this problem you can use a trick (thanks to @elnjensen) with the `which` statement to insert the full path to your installation at runtime.
 If you already downloaded this repository and then added this to your `PATH` try
 
     $ which MS_to_UVHDF5.py
@@ -147,15 +152,18 @@ if you added the scripts to your `PATH` correctly, you should see something simi
 
 **Export MS to UVHDF5**
 
-    $ casapy --nologger --nogui -c `which MS_to_UVHDF5.py` --MS YOUR_DATA.ms --out data.hdf5
+    $ casa --nologger --nogui -c `which MS_to_UVHDF5.py` --MS YOUR_DATA.ms --out data.hdf5
 
 **Import UVHDF5 to MS**
 
-    $ casapy --nologger --nogui -c `which UVHDF5_to_MS.py` --HDF5 MY_MODEL.hdf5 --MS YOUR_ORIGINAL_DATA.ms --out MY_MODEL.ms
+    $ casa --nologger --nogui -c `which UVHDF5_to_MS.py` --HDF5 MY_MODEL.hdf5 --MS YOUR_ORIGINAL_DATA.ms --out MY_MODEL.ms
+
+Be sure to include the backticks on the script, as well as the arguments `--MS` and `--HDF5`.
 
 ## Running using CASAC distribution
 
-First, you will need to install the `casac` distribution using 
+You also have the option of using Peter Williams' `casac` conda distribution, which is generally faster and easier to script. However some users have noted difficulty installing `casac`.
+First, you will need to install the `casac` distribution using
 
     conda install -c pkgw casa-python casa-data
 
@@ -195,7 +203,7 @@ So, you would use this like
       --casac      Use the casac distribution instead of casapy
 
 So, you would use this like
-    
+
     $ UVHDF5_to_MS.py --HDF5 data.hdf5 --MS 2M1207_12CO.data.ms --casac
 
 # Converting UVFITS to and from UVHDF5

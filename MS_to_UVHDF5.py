@@ -18,7 +18,7 @@ cc = 2.99792458e10 # [cm s^-1]
 # Credit: parts of this file originated from the `vis_sample` repository,
 # at https://github.com/AstroChem/vis_sample/blob/master/vis_sample/file_handling.py
 
-# commands for retrieving ms data are from Sean Andrews (@seanandrews)
+# commands for retrieving ms data are built upon an initial script from Sean Andrews (@seanandrews)
 
 if args.casac:
     try:
@@ -32,6 +32,8 @@ if args.casac:
         sys.exit(1)
 
 filename = args.MS
+
+print("This script assumes that the measurement set {} contains ONLY the data to be exported to UVHDF5. E.g., it contains exactly 1 spectral window, exactly 1 field (your target), and exactly the number of channels that you want to export. If this does not describe your dataset, then you might want to use CASA's mstransform to output a version of the dataset that satisfies these criteria. Second, it may be worthwhile to average your data slightly in both velocity (channels) and time (bin visibilities in time) in order to reduce the size of the data. These tasks can also be performed by CASA's mstransform.".format(filename))
 
 # Use CASA table tools to get columns of UVW, DATA, WEIGHT, etc.
 tb.open(filename)
@@ -104,6 +106,7 @@ print("flag shape", flag.shape)
 
 # uu, vv are now (nchan, nvis) shape arrays
 shape = uu.shape
+nvis = shape[1]
 
 # Export to HDF5 format
 
@@ -140,6 +143,9 @@ if dnu_pos:
     fid.create_dataset("real", shape, dtype="float64")[:,:] = real # [Jy]
     fid.create_dataset("imag", shape, dtype="float64")[:,:] = imag # [Jy]
 
+    fid.create_dataset("ant1", (nvis,), dtype="int")[:] = ant1
+    fid.create_dataset("ant2", (nvis,), dtype="int")[:] = ant2
+
     fid.create_dataset("weight", shape, dtype="float64")[:,:] = weight #[1/Jy^2]
     fid.create_dataset("flag", shape, dtype="int")[:,:] = flag # Boolean
 
@@ -153,6 +159,9 @@ else:
 
     fid.create_dataset("real", shape, dtype="float64")[:,:] = real[::-1] # [Jy]
     fid.create_dataset("imag", shape, dtype="float64")[:,:] = imag[::-1] # [Jy]
+
+    fid.create_dataset("ant1", (nvis,), dtype="int")[:] = ant1[::-1]
+    fid.create_dataset("ant2", (nvis,), dtype="int")[:] = ant2[::-1]
 
     fid.create_dataset("weight", shape, dtype="float64")[:,:] = weight[::-1] #[1/Jy^2]
     fid.create_dataset("flag", shape, dtype="int")[:,:] = flag[::-1] # Boolean
