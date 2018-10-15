@@ -39,7 +39,7 @@ print("This script assumes that the measurement set {} contains ONLY the data to
 tb.open(filename)
 data    = tb.getcol("DATA")
 uvw     = tb.getcol("UVW")
-flag    = tb.getcol("FLAG")
+flag    = tb.getcol("FLAG") # TRUE, if the datapoint should be flagged out of the analysis
 weight  = tb.getcol("WEIGHT")
 ant1    = tb.getcol("ANTENNA1")
 ant2    = tb.getcol("ANTENNA2")
@@ -92,7 +92,7 @@ if nchan==1:
     imag = Im[np.newaxis, :]
 
 flagged = np.any(flag, axis=(0)) # Boolean array of size (nchan, nvis)
-unflagged = ~flagged # Flip so that indexing by this array gives us the good visibilities
+# unflagged = ~flagged # Flip so that indexing by this array gives us the good visibilities
 
 # toss out the autocorrelation placeholders
 # Flags to select only the cross-correlation values
@@ -100,9 +100,10 @@ xc = ant1 != ant2
 
 # Now, combine the flagging indices with the autocorrelation indices
 # These flags denote all visibilities that we should not be including in our likelihood calculation.
-flag = ~xc & flagged
-
-print("flag shape", flag.shape)
+# flag = ~xc & flagged # old, incorrect
+# flag = ~xc | flagged
+unflagged = xc & ~flagged
+print("Total of {} good visibility points".format(np.sum(unflagged)))
 
 # uu, vv are now (nchan, nvis) shape arrays
 shape = uu.shape
@@ -147,7 +148,7 @@ if dnu_pos:
     fid.create_dataset("ant2", (nvis,), dtype="int")[:] = ant2
 
     fid.create_dataset("weight", shape, dtype="float64")[:,:] = weight #[1/Jy^2]
-    fid.create_dataset("flag", shape, dtype="int")[:,:] = flag # Boolean
+    fid.create_dataset("flag", shape, dtype="int")[:,:] = unflagged # Boolean
 
 else:
     print("UVFITS stored frequencies in decreasing order, flipping to positive for UVHDF5")
@@ -164,6 +165,6 @@ else:
     fid.create_dataset("ant2", (nvis,), dtype="int")[:] = ant2[::-1]
 
     fid.create_dataset("weight", shape, dtype="float64")[:,:] = weight[::-1] #[1/Jy^2]
-    fid.create_dataset("flag", shape, dtype="int")[:,:] = flag[::-1] # Boolean
+    fid.create_dataset("flag", shape, dtype="int")[:,:] = unflagged[::-1] # Boolean
 
 fid.close()
