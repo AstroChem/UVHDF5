@@ -71,7 +71,7 @@ if dnu_pos:
     real = fid["real"][:,:] # [Jy]
     imag = fid["imag"][:,:] # [Jy]
     weight = fid["weight"][:,:] #[1/Jy^2]
-    flag = fid["flag"][:,:] # Bool
+    unflagged = fid["flag"][:,:] # Bool
 else:
     freqs = fid["freqs"][:][::-1] # [Hz]
     uu = fid["uu"][:][::-1,:] # [kilolam]
@@ -79,7 +79,7 @@ else:
     real = fid["real"][:][::-1,:] # [Jy]
     imag = fid["imag"][:][::-1,:] # [Jy]
     weight = fid["weight"][:][::-1,:] #[1/Jy^2]
-    flag = fid["flag"][:][::-1,:] # Bool
+    unflagged = fid["flag"][:][::-1,:] # Bool
 
 VV = real + 1.0j * imag # [Jy]
 fid.close()
@@ -94,17 +94,21 @@ uvw = tb.getcol("UVW")
 ms_weight = tb.getcol("WEIGHT")
 ms_flag = tb.getcol("FLAG")
 
-flagged = np.any(ms_flag, axis=(0, 1)) # Boolean array of length nvis
-unflagged = ~flagged # Flip so that indexing by this array gives us the good visibilities
+# flagged = np.any(ms_flag, axis=(0, 1)) # Boolean array of length nvis
+# unflagged = ~flagged # Flip so that indexing by this array gives us the good visibilities
+
+flagged = np.any(ms_flag, axis=(0))
 
 # we need to pull the antennas and find where the autocorrelation values are and aren't
 ant1    = tb.getcol("ANTENNA1")
 ant2    = tb.getcol("ANTENNA2")
+# xc = ant1 != ant2 # indices of cross-correlations
 xc = ant1 != ant2 # indices of cross-correlations
 
 # Now, combine the flagging indices with the autocorrelation indices
 # These flags denote all visibilities that we should not be including in our likelihood calculation.
-ms_flag = ~xc & flagged
+# ms_flag = ~xc & flagged
+ms_unflagged = xc & ~flagged
 
 # Break out the u, v spatial frequencies (in meter units)
 ms_uu = uvw[0,:]
@@ -131,7 +135,7 @@ if not args.skip:
     assert np.allclose(uu, ms_uu), "UU do not match."
     assert np.allclose(vv, ms_vv), "VV do not match."
     assert np.allclose(weight, Wgt), "Weights do not match."
-    assert np.all(flag == ms_flag), "Flags do not match."
+    assert np.all(unflagged == ms_unflagged), "Flags do not match."
 
 # replace the *FULL* original data with the visibilities from the HDF
 
