@@ -115,19 +115,17 @@ This step is a little more complicated, but it's mainly due to the difficulty of
 
 ## Running using your own `casa` distribution
 
-The first option requires the python `cython` and `h5py` packages to be installed *into your CASA python distribution.* This can be a little tricky, since CASA bundles its own python interpreter *separate* from whatever python interpreter you have on your system (whether it be your system's python or anaconda python).
+The first option requires the python `cython` and `h5py` packages to be installed *into your CASA python distribution.* This can be a little tricky, since CASA bundles its own python interpreter *separate* from whatever python interpreter you have on your system (whether it be your system's python or anaconda python). This will likely become easier once CASA 6.x is released.
 
-The most recent method known to work (April 2018) is provided the ever-useful astropy docs, [here](http://astropy.readthedocs.io/en/stable/install.html#installing-astropy-into-casa), replacing the `astropy` command with our desired packages. First, start up your casa distribution and run
+The most recent method known to work (December 2019, CASA 5.6.1) is provided the ever-useful astropy docs, [here](http://astropy.readthedocs.io/en/stable/install.html#installing-astropy-into-casa), replacing the `astropy` command with our desired packages. First, start up your casa distribution and run
 
     CASA <1>: from setuptools.command import easy_install
     CASA <2>: easy_install.main(['--user', 'pip'])
 
 Then exit CASA and re-open it, then
 
-    CASA <1>: import pip
-    CASA <2>: pip.main(['install', 'cython', '--user'])
-    CASA <3>: pip.main(['install', 'h5py', '--user'])
-
+    CASA <1>: import subprocess, sys
+    CASA <2>: subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--user', 'cython', 'h5py'])    
 Then exit CASA again, and re-open it, and you should be able to do
 
     CASA <1>: import h5py
